@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Altana News Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Newsreader:ital,opsz,wght@0,8..60,500;0,8..60,600;1,8..60,400&display=swap');
+  :root {
+    --black:#0a0a0a; --cream:#E8E0D0; --cream-dim:#B8B0A0; --cream-muted:#6B6560;
+    --surface:#111111; --surface2:#181818; --border:rgba(232,224,208,0.1);
+    --border-hover:rgba(232,224,208,0.25);
+    --red:#E8401C; --gold:#C49A2A; --blue:#2563EB; --slate:#94A3B8; --green:#16A34A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:var(--black);color:var(--cream);min-height:100vh}
+  .accent-stripe{display:grid;grid-template-columns:repeat(5,1fr);height:4px;position:sticky;top:0;z-index:200}
+  .accent-stripe span:nth-child(1){background:var(--red)} .accent-stripe span:nth-child(2){background:var(--gold)}
+  .accent-stripe span:nth-child(3){background:var(--blue)} .accent-stripe span:nth-child(4){background:var(--slate)}
+  .accent-stripe span:nth-child(5){background:var(--green)}
+  header{background:var(--black);border-bottom:1px solid var(--border);padding:20px 40px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:4px;z-index:100}
+  .logo{display:flex;align-items:center;gap:14px}
+  .logo-name{font-size:17px;font-weight:600;color:var(--cream);letter-spacing:.04em;text-transform:uppercase}
+  .logo-sub{font-size:11px;color:var(--cream-muted);letter-spacing:.08em;text-transform:uppercase}
+  .header-right{display:flex;align-items:center;gap:16px}
+  .last-updated{font-size:12px;color:var(--cream-muted)}
+  .refresh-btn{background:transparent;border:1px solid var(--border-hover);color:var(--cream-dim);padding:9px 20px;border-radius:2px;cursor:pointer;font-size:12px;font-family:inherit;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px;transition:all .2s}
+  .refresh-btn:hover{border-color:var(--cream);color:var(--cream)}
+  .refresh-btn.loading{opacity:.5;pointer-events:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spin{display:inline-block;animation:spin .8s linear infinite}
+  /* Tab nav */
+  .tab-nav{background:var(--black);border-bottom:1px solid var(--border);padding:0 40px;display:flex;position:sticky;top:85px;z-index:99;overflow-x:auto}
+  .tab-nav::-webkit-scrollbar{height:0}
+  .tab-btn{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--cream-muted);padding:14px 20px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;transition:all .15s;margin-bottom:-1px}
+  .tab-btn:hover{color:var(--cream-dim)}
+  .tab-btn.active{color:var(--cream);border-bottom-color:var(--cream)}
+  /* Cat filter nav */
+  .cat-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 40px;display:flex;overflow-x:auto}
+  .cat-nav::-webkit-scrollbar{height:0}
+  .cat-btn{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--cream-muted);padding:10px 14px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:500;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;transition:all .15s;margin-bottom:-1px}
+  .cat-btn:hover{color:var(--cream-dim)}
+  .cat-btn.active{color:var(--cream);border-bottom-color:var(--gold)}
+  main{max-width:1440px;margin:0 auto;padding:36px 40px}
+  .status-bar{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--cream-muted);letter-spacing:.04em;margin-bottom:36px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+  .status-dot.loading{background:var(--gold);animation:blink 1s infinite}
+  .status-dot.error{background:var(--red)}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .date-banner{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-muted);margin-bottom:32px}
+
+  /* ── DAILY BRIEFING (editorial / section-front layout) ── */
+  .summary-page{display:none}
+  .summary-page.active{display:block}
+  .briefing-masthead{display:flex;align-items:baseline;flex-wrap:wrap;gap:12px 20px;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+  .briefing-masthead-label{font-family:'Newsreader',Georgia,serif;font-size:clamp(26px,4vw,34px);font-weight:600;color:var(--cream);letter-spacing:-.02em}
+  .briefing-masthead-rule{flex:1;min-width:48px;height:1px;background:linear-gradient(90deg,var(--border-hover),transparent)}
+  .briefing-masthead-date{font-size:12px;color:var(--cream-muted);letter-spacing:.06em}
+  .summary-lead{margin-bottom:32px}
+  .summary-lead-inner{display:block;background:var(--surface);border:1px solid var(--border);overflow:hidden}
+  .summary-lead-inner--empty{padding:36px 28px}
+  .summary-lead-inner--empty .summary-lead-title{font-family:'Inter',sans-serif;font-size:18px;font-weight:600;margin:0}
+  .summary-lead-text{padding:28px 32px;display:flex;flex-direction:column;justify-content:center;gap:14px}
+  @media (max-width:900px){.summary-lead-text{padding:24px}}
+  .summary-lead-kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+  .summary-lead-title{font-family:'Newsreader',Georgia,serif;font-size:clamp(22px,2.8vw,30px);font-weight:600;line-height:1.25;color:var(--cream);margin:0}
+  .summary-lead-title a{color:inherit;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .2s,color .2s}
+  .summary-lead-title a:hover{border-bottom-color:rgba(232,224,208,.35)}
+  .summary-lead-dek{font-size:15px;font-weight:300;color:var(--cream-dim);line-height:1.75;margin:0}
+  .summary-lead-meta{font-size:12px;color:var(--cream-muted);letter-spacing:.04em}
+  .briefing-subhead{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);margin:8px 0 16px}
+  .briefing-stream{display:flex;flex-direction:column;border:1px solid var(--border);background:var(--black);margin-bottom:32px}
+  .briefing-row{display:flex;flex-direction:column;gap:6px;padding:18px 20px;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;transition:background .15s}
+  .briefing-row:last-child{border-bottom:none}
+  .briefing-row:hover{background:var(--surface2)}
+  @media (max-width:560px){.briefing-row{padding:14px}}
+  .briefing-row-body{display:flex;flex-direction:column;gap:6px;justify-content:center;min-width:0}
+  .briefing-row-cat{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-muted)}
+  .briefing-row-title{font-size:14px;font-weight:500;line-height:1.45;color:var(--cream)}
+  .briefing-row-meta{font-size:11px;color:var(--cream-muted)}
+  .priority-stack{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+  .priority-item{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;background:linear-gradient(90deg,rgba(232,64,28,.12),transparent);border:1px solid rgba(232,64,28,.35);border-left-width:4px;border-left-color:var(--red);cursor:pointer;text-align:left;transition:background .15s,border-color .15s}
+  .priority-item:hover{background:rgba(232,64,28,.08)}
+  .priority-item-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--red);font-weight:600;flex-shrink:0;margin-top:2px}
+  .priority-item-text{font-size:13px;color:var(--cream);line-height:1.5;font-weight:400}
+  .priority-item-text em{font-style:normal;color:var(--cream-muted);font-size:12px}
+  .resource-strip{font-size:12px;color:var(--cream-muted);margin-bottom:24px;line-height:1.65;max-width:900px}
+  .resource-strip-label{letter-spacing:.08em;text-transform:uppercase;font-size:10px;margin-right:10px;color:var(--cream-dim)}
+  .resource-strip a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(196,154,42,.35)}
+  .resource-strip a:hover{color:var(--cream);border-bottom-color:var(--gold)}
+
+  /* ── FEED PAGE ── */
+  .feed-page{display:none}
+  .feed-page.active{display:block}
+  .section-group{margin-bottom:48px}
+  .section-header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+  .section-accent{width:3px;height:20px;flex-shrink:0}
+  .section-title{font-size:11px;font-weight:600;color:var(--cream-dim);letter-spacing:.12em;text-transform:uppercase}
+  .section-count{font-size:11px;color:var(--cream-muted)}
+  .section-refresh{background:transparent;border:1px solid var(--border);color:var(--cream-muted);width:28px;height:28px;border-radius:2px;cursor:pointer;font-size:15px;line-height:1;font-family:inherit;flex-shrink:0;padding:0;display:inline-flex;align-items:center;justify-content:center;transition:border-color .15s,color .15s}
+  .section-refresh:hover{border-color:var(--border-hover);color:var(--cream-dim)}
+  .section-refresh:disabled{opacity:.45;cursor:not-allowed}
+  .section-rule{flex:1;height:1px;background:var(--border)}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1px;background:var(--border);border:1px solid var(--border)}
+  .card{background:var(--black);padding:0;cursor:pointer;transition:background .15s;display:flex;flex-direction:column;gap:0;position:relative;overflow:hidden}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:transparent;transition:background .15s;z-index:1}
+  .card:hover{background:var(--surface2)}
+  .card:hover::before{background:var(--cream-muted)}
+  .card-body{padding:22px;display:flex;flex-direction:column;gap:10px}
+  .card-meta{display:flex;align-items:center;justify-content:space-between}
+  .source-tag{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-muted)}
+  .time-tag{font-size:10px;color:var(--cream-muted)}
+  .card-title{font-size:14px;font-weight:500;color:var(--cream);line-height:1.55}
+  .card-summary{font-size:13px;font-weight:300;color:var(--cream-dim);line-height:1.7}
+  .card-tags{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--cream-muted);border:1px solid var(--border);padding:2px 8px}
+  /* skeleton */
+  .card-grid-skeleton{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:48px}
+  .skeleton{background:var(--black);padding:22px;display:flex;flex-direction:column;gap:10px}
+  .skel-line{background:var(--surface2);animation:shimmer 1.8s infinite}
+  @keyframes shimmer{0%,100%{opacity:.4}50%{opacity:.7}}
+  .empty-state{padding:60px 0;text-align:center;color:var(--cream-muted);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+  /* Search */
+  .search-page{display:none}
+  .search-page.active{display:block}
+  .search-panel{background:var(--surface);border:1px solid var(--border);padding:20px 24px;margin-bottom:28px}
+  .search-panel label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-muted);margin-bottom:10px}
+  .search-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .search-input{flex:1;min-width:220px;background:var(--black);border:1px solid var(--border-hover);color:var(--cream);padding:12px 14px;font-size:14px;font-family:inherit;border-radius:2px}
+  .search-input:focus{outline:none;border-color:var(--gold)}
+  .search-hint{font-size:12px;color:var(--cream-muted);margin-top:12px;line-height:1.6}
+  .search-results-meta{font-size:12px;color:var(--cream-muted);margin-bottom:16px}
+  .search-btn-web{background:transparent;border:1px solid var(--border-hover);color:var(--cream-dim);padding:12px 18px;border-radius:2px;cursor:pointer;font-size:12px;font-family:inherit;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;transition:all .2s}
+  .search-btn-web:hover{border-color:var(--cream);color:var(--cream)}
+  .google-cse-wrap{margin-top:16px;min-height:120px;background:var(--black);border:1px solid var(--border);border-radius:2px;padding:12px;overflow:auto}
+  .google-cse-wrap .gsc-control-cse{background:transparent!important;border:none!important;padding:0!important}
+</style>
+</head>
+<body>
+
+<div class="accent-stripe"><span></span><span></span><span></span><span></span><span></span></div>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 36 36" fill="none" width="36" height="36">
+      <circle cx="18" cy="18" r="17" fill="#E8E0D0"/>
+      <rect x="2" y="2" width="15" height="15" fill="#0a0a0a"/>
+      <rect x="19" y="2" width="15" height="15" fill="#0a0a0a"/>
+      <rect x="2" y="19" width="15" height="15" fill="#0a0a0a"/>
+      <rect x="10" y="10" width="7" height="7" fill="#E8E0D0"/>
+    </svg>
+    <div style="margin-left:14px">
+      <div class="logo-name">Altana</div>
+      <div class="logo-sub">News Intelligence</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="last-updated">—</span>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadAllNews()">
+      <span id="refresh-icon">↻</span>&nbsp;Refresh
+    </button>
+  </div>
+</header>
+
+<!-- Top-level tabs -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('summary',this)">Daily Briefing</button>
+  <button class="tab-btn" onclick="switchTab('feed',this)">All Feeds</button>
+  <button class="tab-btn" onclick="switchTab('search',this)">Search</button>
+</div>
+
+<!-- Category filter (only shows on feed tab) -->
+<div class="cat-nav" id="cat-nav">
+  <button class="cat-btn active" onclick="filterCat('all',this)">All</button>
+  <button class="cat-btn" onclick="filterCat('white-house',this)">White House</button>
+  <button class="cat-btn" onclick="filterCat('congress',this)">Congress</button>
+  <button class="cat-btn" onclick="filterCat('federal-register',this)">Federal Register</button>
+  <button class="cat-btn" onclick="filterCat('dhs',this)">DHS</button>
+  <button class="cat-btn" onclick="filterCat('state-dept',this)">State Dept</button>
+  <button class="cat-btn" onclick="filterCat('treasury',this)">Treasury / OFAC</button>
+  <button class="cat-btn" onclick="filterCat('commerce',this)">Commerce / BIS</button>
+  <button class="cat-btn" onclick="filterCat('dod',this)">DOD</button>
+  <button class="cat-btn" onclick="filterCat('trade',this)">Trade & Tariffs</button>
+  <button class="cat-btn" onclick="filterCat('supply-chain',this)">Supply Chain</button>
+  <button class="cat-btn" onclick="filterCat('sanctions',this)">Sanctions</button>
+  <button class="cat-btn" onclick="filterCat('geopolitics',this)">Geopolitics</button>
+  <button class="cat-btn" onclick="filterCat('china',this)">China</button>
+  <button class="cat-btn" onclick="filterCat('tech-ai',this)">Tech & AI</button>
+  <button class="cat-btn" onclick="filterCat('finance',this)">Finance</button>
+  <button class="cat-btn" onclick="filterCat('energy',this)">Energy</button>
+  <button class="cat-btn" onclick="filterCat('defense',this)">Defense</button>
+  <button class="cat-btn" onclick="filterCat('dc-politics',this)">DC Politics</button>
+  <button class="cat-btn" onclick="filterCat('intl-reg',this)">Intl Regulatory</button>
+</div>
+
+<main>
+  <div class="status-bar">
+    <div class="status-dot loading" id="status-dot"></div>
+    <span id="status-text">Loading Altana News Intelligence...</span>
+  </div>
+
+  <!-- SUMMARY / BRIEFING PAGE -->
+  <div class="summary-page active" id="summary-page">
+    <div class="briefing-masthead">
+      <span class="briefing-masthead-label">Daily Briefing</span>
+      <span class="briefing-masthead-rule" aria-hidden="true"></span>
+      <span class="briefing-masthead-date" id="date-banner"></span>
+    </div>
+    <div id="summary-lead" class="summary-lead">
+      <article class="summary-lead-inner summary-lead-inner--empty">
+        <div class="summary-lead-text">
+          <p class="summary-lead-title">Loading today's briefing…</p>
+          <p class="summary-lead-dek">Fetching public RSS feeds.</p>
+        </div>
+      </article>
+    </div>
+    <div id="priority-alerts" class="priority-stack"></div>
+    <p class="resource-strip">
+      <span class="resource-strip-label">Trade</span>
+      <a href="https://www.newsnow.com/us/Business/World+Economy/International+Trade" target="_blank" rel="noopener noreferrer">NewsNow — International Trade</a>
+    </p>
+    <p class="resource-strip">
+      <span class="resource-strip-label">State Dept</span>
+      <a href="https://www.state.gov/rss-feeds" target="_blank" rel="noopener noreferrer">Official RSS feeds directory (state.gov)</a>
+    </p>
+    <h2 class="briefing-subhead">Coverage snapshot</h2>
+    <div class="briefing-stream" id="summary-grid"></div>
+  </div>
+
+  <!-- ALL FEEDS PAGE -->
+  <div class="feed-page" id="feed-page">
+    <div id="news-container"></div>
+  </div>
+
+  <!-- KEYWORD SEARCH + optional Google web search -->
+  <div class="search-page" id="search-page">
+    <div class="search-panel">
+      <label for="google-web-q">Search the web (Google)</label>
+      <div class="search-row">
+        <input type="search" class="search-input" id="google-web-q" placeholder="Anything — opens Google in a new tab" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();openGoogleWebSearch();}">
+        <button type="button" class="search-btn-web" onclick="openGoogleWebSearch()">Open in Google</button>
+      </div>
+      <p class="search-hint">Works immediately with no API keys. For Google results <em>inside</em> this page, create a free <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" rel="noopener noreferrer" style="color:var(--gold)">Programmable Search Engine</a> (search the whole web), copy the “Search engine ID”, and paste it into <code style="color:var(--cream-dim)">GOOGLE_CSE_CX</code> at the top of the script in <code style="color:var(--cream-dim)">index.html</code>.</p>
+      <div id="google-cse-host" class="google-cse-wrap" style="display:none" aria-label="Google custom search results"></div>
+    </div>
+    <div class="search-panel">
+      <label for="article-search-q">Find in titles &amp; summaries</label>
+      <div class="search-row">
+        <input type="search" class="search-input" id="article-search-q" placeholder="e.g. tariff semiconductor USTR hearing" autocomplete="off" oninput="runArticleSearch()">
+      </div>
+      <p class="search-hint">Type any words; all of them must match (case-insensitive). Searches articles already loaded from RSS — use Refresh first for the latest items. This replaces a separate “AI chat” for hunting keywords without cloud APIs.</p>
+    </div>
+    <div class="search-results-meta" id="search-results-meta"></div>
+    <div id="search-results"></div>
+  </div>
+</main>
+
+<script>
+const ACCENTS = ['#E8401C','#C49A2A','#2563EB','#94A3B8','#16A34A'];
+
+const CAT_META = {
+  'white-house':     { label: 'White House',         color: '#E8401C' },
+  'congress':        { label: 'Congress & Hearings', color: '#C49A2A' },
+  'federal-register':{ label: 'Federal Register',    color: '#2563EB' },
+  'dhs':             { label: 'DHS & Border',        color: '#94A3B8' },
+  'state-dept':      { label: 'State Department',    color: '#16A34A' },
+  'treasury':        { label: 'Treasury / OFAC',     color: '#E8401C' },
+  'commerce':        { label: 'Commerce / BIS',      color: '#C49A2A' },
+  'dod':             { label: 'DOD & Pentagon',      color: '#2563EB' },
+  'trade':           { label: 'Trade & Tariffs',     color: '#94A3B8' },
+  'supply-chain':    { label: 'Supply Chain',        color: '#16A34A' },
+  'sanctions':       { label: 'Sanctions & Compliance', color: '#E8401C' },
+  'geopolitics':     { label: 'Geopolitics',         color: '#C49A2A' },
+  'china':           { label: 'China',               color: '#2563EB' },
+  'tech-ai':         { label: 'Tech & AI',           color: '#16A34A' },
+  'finance':         { label: 'Finance & Markets',   color: '#E8401C' },
+  'energy':          { label: 'Energy & Commodities',color: '#C49A2A' },
+  'defense':         { label: 'Defense Industry',    color: '#2563EB' },
+  'dc-politics':     { label: 'DC Politics & Appointments', color: '#94A3B8' },
+  'intl-reg':        { label: 'Intl Regulatory',     color: '#16A34A' },
+};
+
+const PRIORITY_KEYWORDS = [
+  'appointed','nomination','confirmed','executive order','sanctions','emergency',
+  'tariff','export control','entity list','indicted','arrested','seized',
+  'declared','breach','shutdown','default',
+  'mullen','doge','cfius','uflpa','ofac','ban','blocked','expelled'
+];
+
+let allArticles = [], activeFilter = 'all', activeTab = 'summary';
+
+/** Web search embed: create a free engine at https://programmablesearchengine.google.com/ (search entire web), then paste the “Search engine ID” here. Leave empty to only use “Open in Google”. */
+var GOOGLE_CSE_CX = '';
+var googleCseScriptRequested = false;
+
+function ensureGoogleCse() {
+  if (!GOOGLE_CSE_CX || googleCseScriptRequested) return;
+  googleCseScriptRequested = true;
+  var host = document.getElementById('google-cse-host');
+  if (!host) return;
+  host.style.display = 'block';
+  host.innerHTML = '<div class="gcse-search"></div>';
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://cse.google.com/cse.js?cx=' + encodeURIComponent(GOOGLE_CSE_CX);
+  document.head.appendChild(s);
+}
+
+function openGoogleWebSearch() {
+  var inp = document.getElementById('google-web-q');
+  var q = (inp && inp.value || '').trim();
+  if (!q) {
+    if (inp) inp.focus();
+    return;
+  }
+  window.open('https://www.google.com/search?q=' + encodeURIComponent(q), '_blank', 'noopener,noreferrer');
+}
+
+/** Max items taken from each RSS source (keep in sync with ITEMS_PER_FEED in lib/harvest.js). */
+const ITEMS_PER_FEED_PARSE = 12;
+
+/** Briefing hero: prefer newest story in these buckets before generic world/war headlines */
+const BRIEFING_FOCUS_CATS = ['white-house', 'trade', 'commerce', 'dc-politics', 'federal-register', 'treasury', 'congress'];
+
+/** Summary cards: policy & trade first, broad world news last */
+const SUMMARY_CAT_ORDER = [
+  'white-house', 'trade', 'commerce', 'dc-politics', 'treasury', 'federal-register',
+  'congress', 'dhs', 'state-dept', 'dod', 'supply-chain', 'sanctions',
+  'finance', 'tech-ai', 'energy', 'defense', 'china', 'intl-reg', 'geopolitics'
+];
+
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function normalizeArticle(a) {
+  var pub = a.pubDate;
+  if (!pub && a.timestamp) pub = new Date(a.timestamp).toISOString();
+  if (!pub) pub = new Date().toISOString();
+  var o = Object.assign({}, a, { pubDate: pub });
+  delete o.imageUrl;
+  return o;
+}
+
+/** Same story link once (aligns with server harvest dedupe). */
+function dedupeArticlesByUrlClient(arr) {
+  var seen = Object.create(null);
+  var out = [];
+  for (var i = 0; i < arr.length; i++) {
+    var a = arr[i];
+    var u = String(a.url || '').trim();
+    var k;
+    if (u) {
+      try {
+        var x = new URL(u);
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'mc_cid', 'mc_eid'].forEach(function (p) {
+          x.searchParams.delete(p);
+        });
+        k = x.href.toLowerCase();
+      } catch (e) {
+        k = u.toLowerCase();
+      }
+    } else {
+      k = 't:' + String(a.title || '').toLowerCase() + '|' + (a.source || '');
+    }
+    if (seen[k]) continue;
+    seen[k] = true;
+    out.push(a);
+  }
+  return out;
+}
+
+function isPriorityTitle(title) {
+  var t = String(title).toLowerCase();
+  return PRIORITY_KEYWORDS.some(function (k) { return t.indexOf(k) !== -1; });
+}
+
+/** Down-rank priority UI for Russia/Ukraine war headlines (sanctions keyword still matches those). */
+function isRussiaUkraineHeadline(title) {
+  var t = String(title).toLowerCase();
+  var needles = ['russia', 'russian', 'ukraine', 'ukrainian', 'kremlin', 'putin', 'zelensky', 'moscow', 'kyiv', 'kiev', 'crimea', 'donbas', 'radio free europe', 'kyiv independent'];
+  for (var i = 0; i < needles.length; i++) {
+    if (t.indexOf(needles[i]) !== -1) return true;
+  }
+  return false;
+}
+
+function showPriorityForArticle(a) {
+  if (!a || isRussiaUkraineHeadline(a.title)) return false;
+  return !!(a.priority || isPriorityTitle(a.title));
+}
+
+function timeAgo(dateStr) {
+  var ts = new Date(dateStr).getTime();
+  if (isNaN(ts)) return '';
+  var m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return m + 'm ago';
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+function pickBriefingLead(sorted) {
+  if (!sorted || !sorted.length) return null;
+  var focus = BRIEFING_FOCUS_CATS;
+  var i, pool = [];
+  for (i = 0; i < sorted.length; i++) {
+    if (focus.indexOf(sorted[i].category) !== -1) pool.push(sorted[i]);
+  }
+  if (!pool.length) pool = sorted;
+  return pool[0];
+}
+
+function setStatus(msg, state) {
+  document.getElementById('status-text').textContent = msg;
+  document.getElementById('status-dot').className = 'status-dot ' + (state || 'loading');
+}
+/* Curated for CORS proxies — Reuters, BBC, Politico, The Hill, Federal Register API RSS, Foreign Policy, FreightWaves, CSIS, WTO.
+   State Dept: official topic feeds from https://www.state.gov/rss-feeds (WordPress /feed/ URLs) + travel advisories XML.
+   Removed: brittle paywalls; AP (no stable public RSS — use Reuters/BBC).
+   FederalRegister.gov HTML can show “Request Access” to automated traffic; feeds use official /api/v1/*.rss (see developers docs).
+   NewsNow topic pages (e.g. International Trade) are JS-fed aggregators without a public RSS URL — link on Daily Briefing. */
+const FEEDS = [
+  { url: 'https://feeds.reuters.com/reuters/politicsNews', source: 'Reuters Politics', cat: 'white-house', tags: ['politics'] },
+  { url: 'https://rss.politico.com/politics-news.xml', source: 'Politico', cat: 'white-house', tags: ['dc'] },
+  { url: 'https://thehill.com/homenews/administration/feed/', source: 'The Hill', cat: 'white-house', tags: ['executive'] },
+  { url: 'https://www.whitehouse.gov/briefing-room/press-briefings/feed/', source: 'White House', cat: 'white-house', tags: ['briefing'] },
+  { url: 'https://rss.politico.com/congress.xml', source: 'Politico Congress', cat: 'congress', tags: ['congress'] },
+  { url: 'https://thehill.com/homenews/senate/feed/', source: 'The Hill Senate', cat: 'congress', tags: ['senate'] },
+  { url: 'https://thehill.com/homenews/house/feed/', source: 'The Hill House', cat: 'congress', tags: ['house'] },
+  { url: 'https://www.federalregister.gov/api/v1/documents.rss?conditions%5Btype%5D%5B%5D=RULE&conditions%5Btype%5D%5B%5D=PROPOSED_RULE', source: 'Federal Register — Rules & proposed', cat: 'federal-register', tags: ['rules', 'rulemaking'] },
+  { url: 'https://www.federalregister.gov/api/v1/documents.rss?conditions%5Btype%5D%5B%5D=NOTICE', source: 'Federal Register — Notices', cat: 'federal-register', tags: ['notice'] },
+  { url: 'https://www.federalregister.gov/api/v1/documents.rss?conditions%5Btype%5D%5B%5D=PRESDOCU', source: 'Federal Register — Presidential', cat: 'federal-register', tags: ['presidential', 'executive'] },
+  { url: 'https://www.federalregister.gov/api/v1/public_inspection_documents.rss', source: 'Federal Register — Public Inspection', cat: 'federal-register', tags: ['public inspection', 'upcoming'] },
+  { url: 'https://feeds.reuters.com/reuters/topNews', source: 'Reuters Top', cat: 'dhs', tags: ['us'] },
+  { url: 'https://feeds.reuters.com/reuters/domesticNews', source: 'Reuters Domestic', cat: 'dhs', tags: ['domestic'] },
+  { url: 'https://www.dhs.gov/rss.xml', source: 'DHS', cat: 'dhs', tags: ['homeland'] },
+  { url: 'https://www.cbp.gov/rss/newsroom', source: 'CBP Newsroom', cat: 'dhs', tags: ['border', 'newsroom'] },
+  /** Official State Dept RSS — https://www.state.gov/rss-feeds */
+  { url: 'https://www.state.gov/rss-feed/africa/feed/', source: 'State — Africa', cat: 'state-dept', tags: ['africa', 'region'] },
+  { url: 'https://www.state.gov/rss-feed/collected-department-releases/feed/', source: 'State — Collected releases', cat: 'state-dept', tags: ['state', 'news'] },
+  { url: 'https://www.state.gov/rss-feed/department-press-briefings/feed/', source: 'State — Press briefings', cat: 'state-dept', tags: ['briefing', 'media'] },
+  { url: 'https://www.state.gov/rss-feed/diplomatic-security/feed/', source: 'State — Diplomatic Security', cat: 'state-dept', tags: ['security'] },
+  { url: 'https://www.state.gov/rss-feed/direct-line-to-american-business/feed/', source: 'State — Direct Line (business)', cat: 'state-dept', tags: ['business', 'trade'] },
+  { url: 'https://www.state.gov/rss-feed/east-asia-and-the-pacific/feed/', source: 'State — East Asia & Pacific', cat: 'state-dept', tags: ['asia', 'pacific'] },
+  { url: 'https://www.state.gov/rss-feed/europe-and-eurasia/feed/', source: 'State — Europe & Eurasia', cat: 'state-dept', tags: ['europe'] },
+  { url: 'https://www.state.gov/rss-feed/international-organizations/feed/', source: 'State — International organizations', cat: 'state-dept', tags: ['multilateral', 'un'] },
+  { url: 'https://www.state.gov/rss-feed/near-east/feed/', source: 'State — Near East', cat: 'state-dept', tags: ['middle east'] },
+  { url: 'https://www.state.gov/rss-feed/press-releases/feed/', source: 'State — Press releases', cat: 'state-dept', tags: ['press', 'state'] },
+  { url: 'https://www.state.gov/rss-feed/public-schedule/feed/', source: 'State — Public schedule', cat: 'state-dept', tags: ['schedule'] },
+  { url: 'https://www.state.gov/rss-feed/secretarys-remarks/feed/', source: 'State — Secretary’s remarks', cat: 'state-dept', tags: ['secretary', 'policy'] },
+  { url: 'https://www.state.gov/rss-feed/south-and-central-asia/feed/', source: 'State — South & Central Asia', cat: 'state-dept', tags: ['asia', 'south asia'] },
+  { url: 'https://travel.state.gov/_res/rss/TAsTWs.xml', source: 'State — Travel advisories', cat: 'state-dept', tags: ['travel', 'advisories'] },
+  { url: 'https://www.state.gov/rss-feed/treaties-new/feed/', source: 'State — Treaties (TIAS)', cat: 'state-dept', tags: ['treaties', 'law'] },
+  { url: 'https://www.state.gov/rss-feed/western-hemisphere/feed/', source: 'State — Western Hemisphere', cat: 'state-dept', tags: ['americas', 'latin america'] },
+  { url: 'https://home.treasury.gov/rss', source: 'Treasury', cat: 'treasury', tags: ['treasury'] },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business', cat: 'treasury', tags: ['markets'] },
+  { url: 'https://feeds.bbci.co.uk/news/business/rss.xml', source: 'BBC Business', cat: 'treasury', tags: ['economy'] },
+  { url: 'https://www.commerce.gov/news/rss', source: 'Commerce Dept', cat: 'commerce', tags: ['commerce'] },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business', cat: 'commerce', tags: ['trade'] },
+  { url: 'https://www.defense.gov/DesktopModules/ArticleCS/RSS.ashx?max=10&ContentType=1&Site=945&Category=', source: 'DOD', cat: 'dod', tags: ['defense'] },
+  { url: 'https://feeds.reuters.com/reuters/politicsNews', source: 'Reuters Politics', cat: 'dod', tags: ['policy'] },
+  { url: 'https://www.wto.org/rss/english/news_e.rss', source: 'WTO', cat: 'trade', tags: ['wto'] },
+  { url: 'https://ustr.gov/archive/Meta_Content/RSS/ustr_press_releases_10475.xml', source: 'USTR', cat: 'trade', tags: ['ustr'] },
+  { url: 'https://rss.politico.com/trade.xml', source: 'Politico Trade', cat: 'trade', tags: ['trade'] },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business', cat: 'trade', tags: ['tariffs'] },
+  { url: 'https://www.freightwaves.com/news/feed', source: 'FreightWaves', cat: 'supply-chain', tags: ['logistics'] },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business', cat: 'supply-chain', tags: ['supply'] },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business', cat: 'sanctions', tags: ['compliance'] },
+  { url: 'https://home.treasury.gov/rss', source: 'Treasury', cat: 'sanctions', tags: ['ofac'] },
+  { url: 'https://www.csis.org/analysis/rss.xml', source: 'CSIS', cat: 'geopolitics', tags: ['security'] },
+  { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC World', cat: 'geopolitics', tags: ['world'] },
+  { url: 'https://feeds.reuters.com/reuters/worldNews', source: 'Reuters World', cat: 'geopolitics', tags: ['geopolitics'] },
+  { url: 'https://feeds.reuters.com/reuters/CNtopNews', source: 'Reuters China', cat: 'china', tags: ['china'] },
+  { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC World', cat: 'china', tags: ['asia'] },
+  { url: 'https://feeds.reuters.com/reuters/technologyNews', source: 'Reuters Tech', cat: 'tech-ai', tags: ['tech'] },
+  { url: 'https://rss.politico.com/technology.xml', source: 'Politico Tech', cat: 'tech-ai', tags: ['policy'] },
+  { url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', source: 'BBC Tech', cat: 'tech-ai', tags: ['technology'] },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business', cat: 'finance', tags: ['markets'] },
+  { url: 'https://feeds.bbci.co.uk/news/business/rss.xml', source: 'BBC Business', cat: 'finance', tags: ['finance'] },
+  { url: 'https://www.federalreserve.gov/feeds/press_all.xml', source: 'Federal Reserve', cat: 'finance', tags: ['fed'] },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business', cat: 'energy', tags: ['commodities'] },
+  { url: 'https://feeds.bbci.co.uk/news/business/rss.xml', source: 'BBC Business', cat: 'energy', tags: ['energy'] },
+  { url: 'https://feeds.reuters.com/reuters/topNews', source: 'Reuters Top', cat: 'defense', tags: ['defense'] },
+  { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC World', cat: 'defense', tags: ['security'] },
+  { url: 'https://rss.politico.com/politics-news.xml', source: 'Politico', cat: 'dc-politics', tags: ['dc'] },
+  { url: 'https://thehill.com/feed/', source: 'The Hill', cat: 'dc-politics', tags: ['politics'] },
+  { url: 'https://feeds.reuters.com/reuters/domesticNews', source: 'Reuters Domestic', cat: 'dc-politics', tags: ['us'] },
+  { url: 'https://feeds.reuters.com/reuters/politicsNews', source: 'Reuters Politics', cat: 'dc-politics', tags: ['washington'] },
+  { url: 'https://www.wto.org/rss/english/news_e.rss', source: 'WTO', cat: 'intl-reg', tags: ['trade law'] },
+  { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC World', cat: 'intl-reg', tags: ['regulatory'] },
+  { url: 'https://feeds.reuters.com/reuters/worldNews', source: 'Reuters World', cat: 'intl-reg', tags: ['global'] },
+];
+
+const PROXY_MAKERS = [
+  (u) => 'https://api.allorigins.win/get?url=' + encodeURIComponent(u),
+  (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  (u) => 'https://corsproxy.io/?' + encodeURIComponent(u),
+  (u) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+];
+
+function abortAfter(ms) {
+  const c = new AbortController();
+  const t = setTimeout(function () { c.abort(); }, ms);
+  return { signal: c.signal, cancel: function () { clearTimeout(t); } };
+}
+
+function isValidRssText(text) {
+  if (typeof text !== 'string' || text.length < 80) return false;
+  var tr = text.trim();
+  if (tr.charAt(0) === '{' && tr.indexOf('"error"') !== -1) return false;
+  return tr.indexOf('<rss') !== -1 || tr.indexOf('<feed') !== -1 || tr.indexOf('rdf:RDF') !== -1 || tr.indexOf('<channel') !== -1;
+}
+
+/** One proxy attempt; rejects if unusable so Promise.any can race siblings. */
+async function fetchXmlOneProxy(proxyMaker, feedUrl) {
+  var proxyUrl = proxyMaker(feedUrl);
+  var _a = abortAfter(14000);
+  var res = await fetch(proxyUrl, { signal: _a.signal });
+  _a.cancel();
+  if (!res.ok) throw new Error('bad status');
+  var text;
+  if (proxyUrl.indexOf('allorigins.win/get') !== -1) {
+    var j = await res.json();
+    if (!j || typeof j.contents !== 'string') throw new Error('no contents');
+    text = j.contents;
+  } else {
+    text = await res.text();
+  }
+  if (!isValidRssText(text)) throw new Error('not rss');
+  return text;
+}
+
+/** Race all proxies in parallel — first valid RSS wins (was: 3 sequential tries × long waits). */
+async function fetchXmlViaProxy(feedUrl) {
+  if (typeof Promise.any === 'function') {
+    try {
+      return await Promise.any(PROXY_MAKERS.map(function (m) {
+        return fetchXmlOneProxy(m, feedUrl);
+      }));
+    } catch (e) {
+      return null;
+    }
+  }
+  for (var p = 0; p < PROXY_MAKERS.length; p++) {
+    try {
+      return await fetchXmlOneProxy(PROXY_MAKERS[p], feedUrl);
+    } catch (e) { /* try next */ }
+  }
+  return null;
+}
+
+/** Same URL may appear multiple times in the list — we fetch once and use the first row only (one section per feed). */
+function groupFeedsByUrl() {
+  var map = {};
+  FEEDS.forEach(function (f) {
+    if (!map[f.url]) map[f.url] = [];
+    map[f.url].push(f);
+  });
+  return Object.keys(map).map(function (url) {
+    return { url: url, feeds: map[url] };
+  });
+}
+
+/** Section refresh: groups where this URL’s primary (first-listed) category is catId. */
+function getGroupsForCategory(catId) {
+  return groupFeedsByUrl().filter(function (g) {
+    return g.feeds[0] && g.feeds[0].cat === catId;
+  });
+}
+
+function categorySetFromGroups(groups) {
+  var s = {};
+  groups.forEach(function (g) {
+    if (g.feeds[0]) s[g.feeds[0].cat] = true;
+  });
+  return s;
+}
+
+function stripHtml(html) {
+  if (!html) return '';
+  var d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+var ATOM_LINK_NS = 'http://www.w3.org/2005/Atom';
+
+function linkHrefFromElement(el) {
+  if (!el) return '';
+  var h = el.getAttribute && el.getAttribute('href');
+  if (h) return h.trim();
+  var t = (el.textContent || '').trim();
+  if (t && /^https?:\/\//i.test(t)) return t;
+  return '';
+}
+
+/** RSS & Atom: many feeds use <atom:link href="…"/> inside <item>; getElementsByTagName('link') misses those. */
+function getItemLink(item) {
+  var i, el, h, bestAlt = '', firstAny = '';
+  var atomLinks = item.getElementsByTagNameNS(ATOM_LINK_NS, 'link');
+  for (i = 0; i < atomLinks.length; i++) {
+    el = atomLinks[i];
+    h = linkHrefFromElement(el);
+    if (!h) continue;
+    var rel = (el.getAttribute('rel') || '').toLowerCase();
+    var typ = (el.getAttribute('type') || '').toLowerCase();
+    if (rel === 'alternate' && (typ.indexOf('html') !== -1 || typ === '')) return h;
+    if (rel === 'alternate' && !bestAlt) bestAlt = h;
+    if (!firstAny) firstAny = h;
+  }
+  if (bestAlt) return bestAlt;
+  if (firstAny) return firstAny;
+
+  var links = item.getElementsByTagName('link');
+  for (i = 0; i < links.length; i++) {
+    h = linkHrefFromElement(links[i]);
+    if (h) return h;
+  }
+  links = item.getElementsByTagName('atom:link');
+  for (i = 0; i < links.length; i++) {
+    h = linkHrefFromElement(links[i]);
+    if (h) return h;
+  }
+
+  var guids = item.getElementsByTagName('guid');
+  if (guids.length) {
+    var gt = (guids[0].textContent || '').trim();
+    if (/^https?:\/\//i.test(gt)) return gt;
+  }
+  var fro = item.getElementsByTagNameNS('http://rssnamespace.org/feedburner/ext/1.0', 'origLink');
+  if (fro.length) {
+    var ot = (fro[0].textContent || '').trim();
+    if (/^https?:\/\//i.test(ot)) return ot;
+  }
+  var idEls = item.getElementsByTagName('id');
+  if (idEls.length) {
+    var idt = (idEls[0].textContent || '').trim();
+    if (/^https?:\/\//i.test(idt)) return idt;
+  }
+  return '';
+}
+
+function getChildText(parent, localNames) {
+  var n, els, j;
+  for (n = 0; n < localNames.length; n++) {
+    els = parent.getElementsByTagName(localNames[n]);
+    if (els.length) return (els[0].textContent || '').trim();
+  }
+  return '';
+}
+
+function getDcDate(item) {
+  var els = item.getElementsByTagNameNS('http://purl.org/dc/elements/1.1/', 'date');
+  return els.length ? (els[0].textContent || '').trim() : '';
+}
+
+function parseRssChannel(xmlStr, feed) {
+  var doc = new DOMParser().parseFromString(xmlStr, 'text/xml');
+  if (doc.querySelector('parsererror')) return [];
+  var out = [];
+  var rssItems = doc.getElementsByTagName('item');
+  var i, n, item, title, link, pubRaw, summary, iso, t;
+  if (rssItems.length) {
+    n = Math.min(rssItems.length, ITEMS_PER_FEED_PARSE);
+    for (i = 0; i < n; i++) {
+      item = rssItems[i];
+      title = getChildText(item, ['title']);
+      if (!title) continue;
+      link = getItemLink(item);
+      pubRaw = getChildText(item, ['pubDate', 'date']) || getDcDate(item);
+      summary = getChildText(item, ['description', 'summary']);
+      if (!summary) {
+        var enc = item.getElementsByTagNameNS('http://purl.org/rss/1.0/modules/content/', 'encoded');
+        if (enc.length) summary = enc[0].textContent || '';
+      }
+      summary = stripHtml(summary);
+      if (summary.length > 280) summary = summary.slice(0, 277) + '...';
+      iso = new Date().toISOString();
+      if (pubRaw) {
+        t = Date.parse(pubRaw);
+        if (!isNaN(t)) iso = new Date(t).toISOString();
+      }
+      out.push({
+        id: feed.cat + '_' + i + '_' + feed.source.replace(/\W/g, '') + '_' + String(i),
+        category: feed.cat,
+        categoryLabel: CAT_META[feed.cat] ? CAT_META[feed.cat].label : feed.cat,
+        title: title,
+        summary: summary || title,
+        source: feed.source,
+        url: link,
+        pubDate: iso,
+        tags: feed.tags,
+        priority: PRIORITY_KEYWORDS.some(function (k) { return title.toLowerCase().indexOf(k) !== -1; })
+      });
+    }
+    return out;
+  }
+  var entries = doc.getElementsByTagName('entry');
+  if (entries.length) {
+    n = Math.min(entries.length, ITEMS_PER_FEED_PARSE);
+    for (i = 0; i < n; i++) {
+      item = entries[i];
+      title = getChildText(item, ['title']);
+      if (!title) continue;
+      link = getItemLink(item);
+      pubRaw = getChildText(item, ['updated', 'published']) || getDcDate(item);
+      summary = getChildText(item, ['summary']);
+      if (!summary) {
+        var cnt = item.getElementsByTagName('content');
+        if (cnt.length) summary = cnt[0].textContent || '';
+      }
+      summary = stripHtml(summary || '');
+      if (summary.length > 280) summary = summary.slice(0, 277) + '...';
+      iso = new Date().toISOString();
+      if (pubRaw) {
+        t = Date.parse(pubRaw);
+        if (!isNaN(t)) iso = new Date(t).toISOString();
+      }
+      out.push({
+        id: feed.cat + '_atom_' + i,
+        category: feed.cat,
+        categoryLabel: CAT_META[feed.cat] ? CAT_META[feed.cat].label : feed.cat,
+        title: title,
+        summary: summary || title,
+        source: feed.source,
+        url: link,
+        pubDate: iso,
+        tags: feed.tags,
+        priority: PRIORITY_KEYWORDS.some(function (k) { return title.toLowerCase().indexOf(k) !== -1; })
+      });
+    }
+  }
+  return out;
+}
+
+async function fetchFeedGroup(group) {
+  try {
+    var xml = await fetchXmlViaProxy(group.url);
+    if (!xml) return [];
+    var primary = group.feeds[0];
+    if (!primary) return [];
+    return parseRssChannel(xml, primary);
+  } catch (e) {
+    return [];
+  }
+}
+
+function renderSummary() {
+  var sorted = allArticles.slice().sort(function (a, b) { return new Date(b.pubDate) - new Date(a.pubDate); });
+  var top = pickBriefingLead(sorted);
+  var leadEl = document.getElementById('summary-lead');
+  if (top) {
+    leadEl.innerHTML =
+      '<article class="summary-lead-inner">' +
+      '<div class="summary-lead-text">' +
+      '<p class="summary-lead-kicker">Lead story · ' + esc(top.categoryLabel) + '</p>' +
+      '<h2 class="summary-lead-title"><a href="' + esc(top.url) + '" target="_blank" rel="noopener noreferrer">' + esc(top.title) + '</a></h2>' +
+      '<p class="summary-lead-dek">' + esc(top.summary) + '</p>' +
+      '<p class="summary-lead-meta">' + esc(top.source) + ' · ' + esc(timeAgo(top.pubDate)) + '</p>' +
+      '</div></article>';
+  } else {
+    leadEl.innerHTML =
+      '<article class="summary-lead-inner summary-lead-inner--empty">' +
+      '<div class="summary-lead-text">' +
+      '<p class="summary-lead-title">No stories loaded yet</p>' +
+      '<p class="summary-lead-dek">Try Refresh, or a different network — CORS proxies can be flaky.</p>' +
+      '</div></article>';
+  }
+
+  var alerts = allArticles.filter(function (a) { return showPriorityForArticle(a); });
+  alerts.sort(function (a, b) {
+    return new Date(b.pubDate) - new Date(a.pubDate);
+  });
+  alerts = alerts.slice(0, 4);
+  var alertContainer = document.getElementById('priority-alerts');
+  if (alerts.length) {
+    alertContainer.innerHTML = alerts.map(function (a) {
+      return '<div class="priority-item" role="link" tabindex="0" onclick="window.open(' + JSON.stringify(a.url) + ',\'_blank\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window.open(' + JSON.stringify(a.url) + ',\'_blank\')}">' +
+        '<span class="priority-item-label">Alert</span>' +
+        '<span class="priority-item-text">' + esc(a.title) + ' <em>— ' + esc(a.source) + '</em></span></div>';
+    }).join('');
+  } else {
+    alertContainer.innerHTML = '';
+  }
+
+  var newestByCat = {};
+  sorted.forEach(function (a) {
+    var cur = newestByCat[a.category];
+    if (!cur || new Date(a.pubDate) > new Date(cur.pubDate)) newestByCat[a.category] = a;
+  });
+  var catOrder = SUMMARY_CAT_ORDER.filter(function (c) { return CAT_META[c]; });
+  var gridItems = catOrder.map(function (c) { return newestByCat[c]; }).filter(Boolean);
+  var grid = document.getElementById('summary-grid');
+  grid.innerHTML = gridItems.map(function (a) {
+    return '<a class="briefing-row" href="' + esc(a.url) + '" target="_blank" rel="noopener noreferrer">' +
+      '<span class="briefing-row-body">' +
+      '<span class="briefing-row-cat">' + esc(a.categoryLabel) + '</span>' +
+      '<span class="briefing-row-title">' + esc(a.title) + '</span>' +
+      '<span class="briefing-row-meta">' + esc(a.source) + ' · ' + esc(timeAgo(a.pubDate)) + '</span>' +
+      '</span></a>';
+  }).join('');
+}
+
+function renderFeed() {
+  var container = document.getElementById('news-container');
+  var arts = activeFilter === 'all' ? allArticles : allArticles.filter(function (a) { return a.category === activeFilter; });
+  if (!arts.length) {
+    var emptyMsg =
+      allArticles.length && activeFilter !== 'all'
+        ? 'No stories in this channel — tap <strong>All</strong> to see other feeds, or Refresh'
+        : 'No articles loaded — open <strong>All</strong>, check /api/news in a new tab, or Refresh';
+    container.innerHTML = '<div class="empty-state">' + emptyMsg + '</div>';
+    return;
+  }
+  var grouped = {};
+  Object.keys(CAT_META).forEach(function (c) { grouped[c] = []; });
+  arts.forEach(function (a) { if (grouped[a.category]) grouped[a.category].push(a); });
+  var html = '';
+  var ai = 0;
+  Object.keys(CAT_META).forEach(function (catId) {
+    var g = grouped[catId];
+    if (!g || !g.length) return;
+    var meta = CAT_META[catId];
+    var color = ACCENTS[ai++ % ACCENTS.length];
+    html += '<div class="section-group" id="sec-' + catId + '"><div class="section-header">' +
+      '<div class="section-accent" style="background:' + color + '"></div>' +
+      '<span class="section-title">' + esc(meta.label) + '</span>' +
+      '<span class="section-count">' + g.length + ' stories</span>' +
+      '<button type="button" class="section-refresh" title="Refresh this section only" onclick="event.stopPropagation();reloadFeedSection(' + JSON.stringify(catId) + ')">↻</button>' +
+      '<div class="section-rule"></div></div><div class="card-grid">';
+    g.forEach(function (a) {
+      var tags = (a.tags || []).slice(0, 3).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
+      var click = a.url ? 'window.open(' + JSON.stringify(a.url) + ',\'_blank\')' : '';
+      var priority = showPriorityForArticle(a) ? 'style="border-top:2px solid var(--red)"' : '';
+      html += '<div class="card" ' + priority + ' onclick="' + click + '">' +
+        '<div class="card-body">' +
+        '<div class="card-meta"><span class="source-tag">' + esc(a.source) + '</span><span class="time-tag">' + esc(timeAgo(a.pubDate)) + '</span></div>' +
+        '<div class="card-title">' + esc(a.title) + '</div><div class="card-summary">' + esc(a.summary) + '</div>' +
+        (tags ? '<div class="card-tags">' + tags + '</div>' : '') + '</div></div>';
+    });
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+}
+
+function renderSkeletons() {
+  var h = '';
+  var i, j;
+  for (i = 0; i < 2; i++) {
+    h += '<div class="card-grid-skeleton">';
+    for (j = 0; j < 4; j++) {
+      h += '<div class="skeleton"><div class="skel-line" style="height:10px;width:22%"></div><div class="skel-line" style="height:14px;width:90%;margin-top:8px"></div><div class="skel-line" style="height:13px;width:75%"></div></div>';
+    }
+    h += '</div>';
+  }
+  document.getElementById('news-container').innerHTML = h;
+}
+
+function runArticleSearch() {
+  var input = document.getElementById('article-search-q');
+  var q = (input && input.value || '').trim().toLowerCase();
+  var meta = document.getElementById('search-results-meta');
+  var container = document.getElementById('search-results');
+  if (!meta || !container) return;
+  if (!allArticles.length) {
+    meta.textContent = 'No articles loaded yet — use Refresh.';
+    container.innerHTML = '';
+    return;
+  }
+  if (!q) {
+    meta.textContent = allArticles.length + ' articles loaded — type keywords to filter.';
+    container.innerHTML = '';
+    return;
+  }
+  var terms = q.split(/\s+/).filter(Boolean);
+  var matched = allArticles.filter(function (a) {
+    var blob = (a.title + ' ' + a.summary + ' ' + a.source + ' ' + (a.categoryLabel || '')).toLowerCase();
+    return terms.every(function (t) { return blob.indexOf(t) !== -1; });
+  });
+  matched.sort(function (a, b) { return new Date(b.pubDate) - new Date(a.pubDate); });
+  meta.textContent = matched.length + ' match' + (matched.length === 1 ? '' : 'es') + ' for “' + q + '”';
+  if (!matched.length) {
+    container.innerHTML = '<div class="empty-state">No matches — try fewer words or Refresh</div>';
+    return;
+  }
+  var html = '<div class="card-grid">';
+  matched.forEach(function (a) {
+    var tags = (a.tags || []).slice(0, 3).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
+    var click = a.url ? 'window.open(' + JSON.stringify(a.url) + ',\'_blank\')' : '';
+    html += '<div class="card" onclick="' + click + '">' +
+      '<div class="card-body">' +
+      '<div class="card-meta"><span class="source-tag">' + esc(a.source) + '</span><span class="time-tag">' + esc(timeAgo(a.pubDate)) + '</span></div>' +
+      '<div class="card-title">' + esc(a.title) + '</div><div class="card-summary">' + esc(a.summary) + '</div>' +
+      '<div class="card-tags"><span class="tag">' + esc(a.categoryLabel) + '</span>' + (tags ? tags : '') + '</div></div></div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function switchTab(tab, btn) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('summary-page').classList.toggle('active', tab === 'summary');
+  document.getElementById('feed-page').classList.toggle('active', tab === 'feed');
+  document.getElementById('search-page').classList.toggle('active', tab === 'search');
+  document.getElementById('cat-nav').style.display = tab === 'feed' ? 'flex' : 'none';
+  if (tab === 'search') {
+    ensureGoogleCse();
+    runArticleSearch();
+  }
+}
+
+function filterCat(id, btn) {
+  activeFilter = id;
+  document.querySelectorAll('.cat-btn').forEach(function (b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderFeed();
+  if (id !== 'all') {
+    var el = document.getElementById('sec-' + id);
+    if (el) setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+  }
+}
+
+var feedSectionReloading = false;
+
+/** Refetch RSS only for feed groups tied to this category; other categories stay untouched. Shared URLs refresh every category slot on that URL. */
+async function reloadFeedSection(catId) {
+  if (feedSectionReloading || !catId) return;
+  if (document.getElementById('refresh-btn').classList.contains('loading')) return;
+  var groups = getGroupsForCategory(catId);
+  if (!groups.length) return;
+  feedSectionReloading = true;
+  document.querySelectorAll('.section-refresh').forEach(function (b) { b.disabled = true; });
+
+  var dropCats = categorySetFromGroups(groups);
+  allArticles = allArticles.filter(function (a) { return !dropCats[a.category]; });
+  renderSummary();
+  renderFeed();
+  if (activeTab === 'search') runArticleSearch();
+
+  var label = (CAT_META[catId] && CAT_META[catId].label) ? CAT_META[catId].label : catId;
+  setStatus('Refreshing “' + label + '”…', 'loading');
+
+  var batchSize = 10;
+  var i;
+  try {
+    for (i = 0; i < groups.length; i += batchSize) {
+      var batch = groups.slice(i, i + batchSize);
+      var results = await Promise.allSettled(batch.map(fetchFeedGroup));
+      results.forEach(function (r) {
+        if (r.status === 'fulfilled') {
+          var v = r.value.map(normalizeArticle);
+          allArticles.push.apply(allArticles, v);
+        }
+      });
+      if (activeTab === 'summary') renderSummary(); else renderFeed();
+      if (activeTab === 'search') runArticleSearch();
+    }
+  } finally {
+    feedSectionReloading = false;
+    document.querySelectorAll('.section-refresh').forEach(function (b) { b.disabled = false; });
+  }
+
+  document.getElementById('last-updated').textContent =
+    'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  setStatus(
+    allArticles.length
+      ? allArticles.length + ' stories · ' + Object.keys(CAT_META).length + ' channels'
+      : 'No articles — try Refresh',
+    allArticles.length ? 'active' : 'error'
+  );
+  renderSummary();
+  renderFeed();
+  if (activeTab === 'search') runArticleSearch();
+}
+
+async function loadAllNews() {
+  var btn = document.getElementById('refresh-btn');
+  var icon = document.getElementById('refresh-icon');
+  var hadArticles = allArticles.length > 0;
+  btn.classList.add('loading');
+  icon.classList.add('spin');
+  document.getElementById('date-banner').textContent =
+    new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  if (!hadArticles) {
+    renderSkeletons();
+    setStatus('Fetching RSS…', 'loading');
+  } else {
+    setStatus('Refreshing all feeds…', 'loading');
+  }
+
+  /** Same-origin API (e.g. Vercel /api/news) uses server-side fetch + direct RSS — avoids brittle public CORS proxies. */
+  var apiHint = '';
+  try {
+    var apiAbort = abortAfter(120000);
+    var apiUrl = (window.location && window.location.origin ? window.location.origin : '') + '/api/news';
+    var apiRes = await fetch(apiUrl, { signal: apiAbort.signal, cache: 'no-store' });
+    apiAbort.cancel();
+    if (apiRes && apiRes.ok) {
+      var payload = await apiRes.json();
+      if (payload && payload.articles && payload.articles.length) {
+        allArticles = dedupeArticlesByUrlClient(payload.articles.map(normalizeArticle));
+        document.getElementById('last-updated').textContent =
+          'Updated ' + new Date(payload.updatedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setStatus(
+          allArticles.length + ' stories · server feed · ' + Object.keys(CAT_META).length + ' channels',
+          'active'
+        );
+        btn.classList.remove('loading');
+        icon.classList.remove('spin');
+        renderSummary();
+        renderFeed();
+        if (activeTab === 'search') runArticleSearch();
+        document.getElementById('cat-nav').style.display = activeTab === 'feed' ? 'flex' : 'none';
+        return;
+      }
+      apiHint = 'Server returned 0 articles (feeds failed or the function timed out). ';
+    } else if (apiRes) {
+      apiHint = '/api/news returned HTTP ' + apiRes.status + ' (often 504 = Vercel killed the function before RSS finished — deploy latest vercel.json with maxDuration 60s). ';
+    }
+  } catch (e) {
+    apiHint = 'Could not reach /api/news (' + (e && e.message ? e.message : 'network') + '). ';
+  }
+
+  var previous = hadArticles ? allArticles.slice() : [];
+  var next = [];
+  setStatus('Fetching RSS in browser (slow / unreliable) — for server-side feeds run: npm run dev → http://localhost:3333', 'loading');
+  var feedGroups = groupFeedsByUrl();
+  var batchSize = 10;
+  var done = 0;
+  var i;
+  for (i = 0; i < feedGroups.length; i += batchSize) {
+    var batch = feedGroups.slice(i, i + batchSize);
+    var results = await Promise.allSettled(batch.map(fetchFeedGroup));
+    results.forEach(function (r) {
+      if (r.status === 'fulfilled') {
+        var v = r.value.map(normalizeArticle);
+        next.push.apply(next, v);
+      }
+    });
+    done = Math.min(i + batchSize, feedGroups.length);
+    allArticles = next.length ? next.slice() : previous.slice();
+    setStatus('Fetched ' + done + '/' + feedGroups.length + ' URLs · ' + allArticles.length + ' stories', 'loading');
+    if (activeTab === 'summary') renderSummary(); else renderFeed();
+  }
+
+  if (!next.length && hadArticles) {
+    allArticles = previous;
+  } else {
+    allArticles = dedupeArticlesByUrlClient(next);
+  }
+
+  document.getElementById('last-updated').textContent =
+    'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  setStatus(
+    allArticles.length
+      ? allArticles.length + ' stories · ' + Object.keys(CAT_META).length + ' channels'
+      : (apiHint || '') + 'No articles — browser fetch also failed (try Refresh, or redeploy so /api/news has 60s max duration)',
+    allArticles.length ? 'active' : 'error'
+  );
+
+  btn.classList.remove('loading');
+  icon.classList.remove('spin');
+  renderSummary();
+  renderFeed();
+  if (activeTab === 'search') runArticleSearch();
+  document.getElementById('cat-nav').style.display = activeTab === 'feed' ? 'flex' : 'none';
+}
+
+document.getElementById('cat-nav').style.display = 'none';
+window.addEventListener('DOMContentLoaded', loadAllNews);
+</script>
+</body>
+</html>

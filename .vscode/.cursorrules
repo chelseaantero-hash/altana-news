@@ -1,0 +1,25 @@
+# MISSION: Senior News Intelligence Architect (Gatopardo Aesthetic)
+
+## 1. UI/UX: "THE DARK EDITORIAL"
+- **Theme:** Use deep Onyx (#050505) with 12px Glassmorphism overlays.
+- **Typography:** Headlines must be Serif (Playfair Display). Body must be clean Sans-Serif (Inter).
+- **Layout:** Implement "The Prestige Grid"—one massive 3D-tilting hero card followed by an asymmetrical bento grid.
+- **Components:** Add a "Summarize" button on every card that triggers a streaming AI overlay.
+
+## 2. THE ENGINE: FEEDBACK LOOP & SPEED
+- **Scraping:** Use Firecrawl or Playwright. Every fetch must use a `try-catch` feedback loop.
+- **Feedback Loop:** If a scrape fails, log the error to `logs/crawler_errors.json`. On the next run, the agent must read this file and attempt a different scraping strategy (e.g., swapping headers or using a proxy).
+- **Parallelism:** Use `Promise.all` for simultaneous multi-source scanning.
+
+## 3. INTELLIGENCE & SUMMARIZATION
+- **Logic:** Summaries must use the "3-3-1 Protocol": 3 hard facts, 3 key entities (people/orgs), and 1 "Why this matters" impact statement.
+- **Direct Linking:** Every summary must contain a primary action button linking to the `original_source_url`.
+
+## 4. TECH STACK & @DOCS
+- Reference Tailwind CSS v4, Framer Motion (for transitions), Vercel AI SDK, Firecrawl, and Lucide.
+- **Cursor indexed docs (Settings → Features → Docs → + Add New Doc):** paste each URL once so @Docs can retrieve them:
+  - Vercel AI SDK: https://sdk.vercel.ai/docs/llms-full.txt
+  - Tailwind CSS v4: https://tailwindcss.com/docs
+  - Firecrawl: https://docs.firecrawl.dev
+  - Framer Motion: https://www.framer.com/motion/
+  - Lucide Icons: https://lucide.dev/guide

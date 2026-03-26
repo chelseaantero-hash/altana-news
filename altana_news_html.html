@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Altana News Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+  :root {
+    --black: #0a0a0a; --cream: #E8E0D0; --cream-dim: #B8B0A0;
+    --cream-muted: #6B6560; --surface2: #181818;
+    --border: rgba(232,224,208,0.1); --border-hover: rgba(232,224,208,0.25);
+    --red: #E8401C; --gold: #C49A2A; --blue: #2563EB; --slate: #94A3B8; --green: #16A34A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--black); color: var(--cream); min-height: 100vh; }
+  .accent-stripe { display: grid; grid-template-columns: repeat(5,1fr); height: 4px; position: sticky; top: 0; z-index: 200; }
+  .accent-stripe span:nth-child(1){background:var(--red)} .accent-stripe span:nth-child(2){background:var(--gold)}
+  .accent-stripe span:nth-child(3){background:var(--blue)} .accent-stripe span:nth-child(4){background:var(--slate)}
+  .accent-stripe span:nth-child(5){background:var(--green)}
+  header { background:var(--black); border-bottom:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:4px; z-index:100; }
+  .logo { display:flex; align-items:center; gap:14px; }
+  .logo-name { font-size:17px; font-weight:600; color:var(--cream); letter-spacing:.04em; text-transform:uppercase; }
+  .logo-sub { font-size:11px; color:var(--cream-muted); letter-spacing:.08em; text-transform:uppercase; }
+  .header-right { display:flex; align-items:center; gap:16px; }
+  .last-updated { font-size:12px; color:var(--cream-muted); }
+  .refresh-btn { background:transparent; border:1px solid var(--border-hover); color:var(--cream-dim); padding:9px 20px; border-radius:2px; cursor:pointer; font-size:12px; font-family:inherit; letter-spacing:.06em; text-transform:uppercase; display:flex; align-items:center; gap:8px; transition:all .2s; }
+  .refresh-btn:hover { border-color:var(--cream); color:var(--cream); }
+  .refresh-btn.loading { opacity:.5; pointer-events:none; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .spin { display:inline-block; animation:spin .8s linear infinite; }
+  .cat-nav { background:var(--black); border-bottom:1px solid var(--border); padding:0 40px; display:flex; overflow-x:auto; position:sticky; top:85px; z-index:99; }
+  .cat-nav::-webkit-scrollbar { height:0; }
+  .cat-btn { background:transparent; border:none; border-bottom:2px solid transparent; color:var(--cream-muted); padding:14px 18px; cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap; transition:all .15s; margin-bottom:-1px; }
+  .cat-btn:hover { color:var(--cream-dim); }
+  .cat-btn.active { color:var(--cream); border-bottom-color:var(--cream); }
+  main { max-width:1440px; margin:0 auto; padding:36px 40px; }
+  .status-bar { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--cream-muted); letter-spacing:.04em; margin-bottom:36px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+  .status-dot { width:6px; height:6px; border-radius:50%; background:var(--green); flex-shrink:0; }
+  .status-dot.loading { background:var(--gold); animation:blink 1s infinite; }
+  .status-dot.error { background:var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .date-banner { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--cream-muted); margin-bottom:32px; }
+  .section-group { margin-bottom:52px; }
+  .section-header { display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+  .section-accent { width:3px; height:20px; flex-shrink:0; }
+  .section-title { font-size:11px; font-weight:600; color:var(--cream-dim); letter-spacing:.12em; text-transform:uppercase; }
+  .section-count { font-size:11px; color:var(--cream-muted); }
+  .section-rule { flex:1; height:1px; background:var(--border); }
+  .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); }
+  .card { background:var(--black); padding:24px; cursor:pointer; transition:background .15s; display:flex; flex-direction:column; gap:12px; position:relative; }
+  .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:transparent; transition:background .15s; }
+  .card:hover { background:var(--surface2); }
+  .card:hover::before { background:var(--cream-muted); }
+  .card-meta { display:flex; align-items:center; justify-content:space-between; }
+  .source-tag { font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--cream-muted); }
+  .time-tag { font-size:10px; color:var(--cream-muted); }
+  .card-title { font-size:14px; font-weight:500; color:var(--cream); line-height:1.55; }
+  .card-summary { font-size:13px; font-weight:300; color:var(--cream-dim); line-height:1.7; }
+  .card-tags { display:flex; gap:6px; flex-wrap:wrap; }
+  .tag { font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--cream-muted); border:1px solid var(--border); padding:2px 8px; }
+  .card-grid-skeleton { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); margin-bottom:52px; }
+  .skeleton { background:var(--black); padding:24px; display:flex; flex-direction:column; gap:12px; }
+  .skel-line { background:var(--surface2); animation:shimmer 1.8s infinite; }
+  @keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:.7} }
+</style>
+</head>
+<body>
+
+<div class="accent-stripe"><span></span><span></span><span></span><span></span><span></span></div>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 36 36" fill="none" width="36" height="36">
+      <circle cx="18" cy="18" r="17" fill="#E8E0D0"/>
+      <rect x="2" y="2" width="15" height="15" fill="#0a0a0a"/>
+      <rect x="19" y="2" width="15" height="15" fill="#0a0a0a"/>
+      <rect x="2" y="19" width="15" height="15" fill="#0a0a0a"/>
+      <rect x="10" y="10" width="7" height="7" fill="#E8E0D0"/>
+    </svg>
+    <div style="margin-left:14px">
+      <div class="logo-name">Altana</div>
+      <div class="logo-sub">News Intelligence</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="last-updated">—</span>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadAllNews()">
+      <span id="refresh-icon">↻</span>&nbsp;Refresh
+    </button>
+  </div>
+</header>
+
+<nav class="cat-nav">
+  <button class="cat-btn active" onclick="filterCat('all',this)">All</button>
+  <button class="cat-btn" onclick="filterCat('world',this)">World News</button>
+  <button class="cat-btn" onclick="filterCat('us-gov',this)">US Gov & Policy</button>
+  <button class="cat-btn" onclick="filterCat('trade',this)">Trade & Customs</button>
+  <button class="cat-btn" onclick="filterCat('supply-chain',this)">Supply Chain</button>
+  <button class="cat-btn" onclick="filterCat('geopolitics',this)">Geopolitics</button>
+  <button class="cat-btn" onclick="filterCat('tech',this)">Tech & AI</button>
+  <button class="cat-btn" onclick="filterCat('finance',this)">Finance</button>
+  <button class="cat-btn" onclick="filterCat('dc',this)">DC Affairs</button>
+</nav>
+
+<main>
+  <div class="status-bar">
+    <div class="status-dot loading" id="status-dot"></div>
+    <span id="status-text">Loading Altana News...</span>
+  </div>
+  <div class="date-banner" id="date-banner"></div>
+  <div id="news-container"></div>
+</main>
+
+<script>
+// Uses a free RSS-to-JSON proxy — no API key needed
+const RSS_PROXY = 'https://api.rss2json.com/v1/api.json?rss_url=';
+
+const ACCENTS = ['#E8401C','#C49A2A','#2563EB','#94A3B8','#16A34A'];
+
+// Each category has multiple RSS feed URLs from authoritative sources
+const CATEGORIES = [
+  {
+    id: 'world',
+    label: 'World News',
+    color: '#E8401C',
+    feeds: [
+      { url: 'https://feeds.reuters.com/reuters/topNews', source: 'Reuters' },
+      { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC' },
+      { url: 'https://apnews.com/rss', source: 'AP News' },
+    ]
+  },
+  {
+    id: 'us-gov',
+    label: 'US Gov & Policy',
+    color: '#C49A2A',
+    feeds: [
+      { url: 'https://federalregister.gov/api/v1/documents.rss?conditions%5Btype%5D%5B%5D=RULE&conditions%5Btype%5D%5B%5D=PROPOSED_RULE&conditions%5Btype%5D%5B%5D=NOTICE', source: 'Federal Register' },
+      { url: 'https://feeds.reuters.com/reuters/politicsNews', source: 'Reuters Politics' },
+      { url: 'https://rss.politico.com/politics-news.xml', source: 'Politico' },
+    ]
+  },
+  {
+    id: 'trade',
+    label: 'Trade & Customs',
+    color: '#2563EB',
+    feeds: [
+      { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business' },
+      { url: 'https://www.wto.org/rss/english/news_e.rss', source: 'WTO' },
+      { url: 'https://rss.politico.com/trade.xml', source: 'Politico Trade' },
+    ]
+  },
+  {
+    id: 'supply-chain',
+    label: 'Supply Chain',
+    color: '#94A3B8',
+    feeds: [
+      { url: 'https://www.freightwaves.com/news/feed', source: 'FreightWaves' },
+      { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business' },
+      { url: 'https://www.supplychainbrain.com/rss/articles', source: 'Supply Chain Brain' },
+    ]
+  },
+  {
+    id: 'geopolitics',
+    label: 'Geopolitics',
+    color: '#16A34A',
+    feeds: [
+      { url: 'https://feeds.reuters.com/Reuters/worldNews', source: 'Reuters World' },
+      { url: 'https://foreignpolicy.com/feed/', source: 'Foreign Policy' },
+      { url: 'https://www.csis.org/analysis/rss.xml', source: 'CSIS' },
+    ]
+  },
+  {
+    id: 'tech',
+    label: 'Tech & AI',
+    color: '#E8401C',
+    feeds: [
+      { url: 'https://feeds.reuters.com/reuters/technologyNews', source: 'Reuters Tech' },
+      { url: 'https://rss.politico.com/technology.xml', source: 'Politico Tech' },
+      { url: 'https://feeds.wired.com/wired/index', source: 'Wired' },
+    ]
+  },
+  {
+    id: 'finance',
+    label: 'Finance & Markets',
+    color: '#C49A2A',
+    feeds: [
+      { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters Business' },
+      { url: 'https://www.imf.org/en/News/rss?language=eng', source: 'IMF' },
+      { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml', source: 'WSJ Markets' },
+    ]
+  },
+  {
+    id: 'dc',
+    label: 'DC Affairs',
+    color: '#2563EB',
+    feeds: [
+      { url: 'https://rss.politico.com/congress.xml', source: 'Politico Congress' },
+      { url: 'https://thehill.com/news/feed/', source: 'The Hill' },
+      { url: 'https://rss.politico.com/huddle.xml', source: 'Politico Huddle' },
+    ]
+  }
+];
+
+let allArticles = [], activeFilter = 'all';
+
+function timeAgo(dateStr) {
+  const ts = new Date(dateStr).getTime();
+  if (isNaN(ts)) return '';
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+function setStatus(msg, state = 'loading') {
+  document.getElementById('status-text').textContent = msg;
+  document.getElementById('status-dot').className = 'status-dot ' + state;
+}
+
+function renderSkeletons() {
+  let h = '';
+  for (let i = 0; i < 2; i++) {
+    h += '<div class="card-grid-skeleton">';
+    for (let j = 0; j < 4; j++) {
+      h += `<div class="skeleton">
+        <div class="skel-line" style="height:10px;width:22%"></div>
+        <div class="skel-line" style="height:14px;width:90%;margin-top:8px"></div>
+        <div class="skel-line" style="height:13px;width:78%"></div>
+        <div class="skel-line" style="height:13px;width:65%"></div>
+      </div>`;
+    }
+    h += '</div>';
+  }
+  document.getElementById('news-container').innerHTML = h;
+}
+
+async function fetchFeed(feedInfo, catId, catLabel) {
+  try {
+    const url = RSS_PROXY + encodeURIComponent(feedInfo.url) + '&count=6';
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.items) return [];
+    return data.items.slice(0, 4).map((item, i) => ({
+      id: catId + '_' + feedInfo.source + '_' + i,
+      category: catId,
+      categoryLabel: catLabel,
+      title: item.title || '',
+      summary: item.description
+        ? item.description.replace(/<[^>]*>/g, '').slice(0, 200) + '...'
+        : '',
+      source: feedInfo.source,
+      url: item.link || '',
+      pubDate: item.pubDate || ''
+    }));
+  } catch (e) {
+    console.warn('Feed failed:', feedInfo.source, e.message);
+    return [];
+  }
+}
+
+function renderAll() {
+  const container = document.getElementById('news-container');
+  const arts = activeFilter === 'all'
+    ? allArticles
+    : allArticles.filter(a => a.category === activeFilter);
+
+  if (!arts.length) {
+    container.innerHTML = `<div style="padding:80px 0;text-align:center;color:var(--cream-muted);font-size:13px;letter-spacing:.06em;text-transform:uppercase">No articles loaded — hit Refresh</div>`;
+    return;
+  }
+
+  const grouped = {};
+  CATEGORIES.forEach(c => { grouped[c.id] = []; });
+  arts.forEach(a => { if (grouped[a.category]) grouped[a.category].push(a); });
+
+  let html = '', ai = 0;
+  CATEGORIES.forEach(cat => {
+    const g = grouped[cat.id];
+    if (!g || !g.length) return;
+    const color = ACCENTS[ai++ % ACCENTS.length];
+    html += `<div class="section-group" id="sec-${cat.id}">
+      <div class="section-header">
+        <div class="section-accent" style="background:${color}"></div>
+        <span class="section-title">${cat.label}</span>
+        <span class="section-count">${g.length} stories</span>
+        <div class="section-rule"></div>
+      </div>
+      <div class="card-grid">`;
+    g.forEach(a => {
+      const click = a.url ? `window.open('${a.url.replace(/'/g,"\\'")}','_blank')` : '';
+      html += `<div class="card" onclick="${click}">
+        <div class="card-meta">
+          <span class="source-tag">${a.source}</span>
+          <span class="time-tag">${timeAgo(a.pubDate)}</span>
+        </div>
+        <div class="card-title">${a.title}</div>
+        <div class="card-summary">${a.summary}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+function filterCat(id, btn) {
+  activeFilter = id;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+  if (id !== 'all') {
+    const el = document.getElementById('sec-' + id);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+}
+
+async function loadAllNews() {
+  const btn = document.getElementById('refresh-btn');
+  const icon = document.getElementById('refresh-icon');
+  btn.classList.add('loading');
+  icon.classList.add('spin');
+  allArticles = [];
+  renderSkeletons();
+  setStatus('Fetching live news feeds...', 'loading');
+
+  document.getElementById('date-banner').textContent =
+    new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  let done = 0;
+  const total = CATEGORIES.reduce((sum, c) => sum + c.feeds.length, 0);
+
+  for (const cat of CATEGORIES) {
+    const results = await Promise.allSettled(
+      cat.feeds.map(f => fetchFeed(f, cat.id, cat.label))
+    );
+    results.forEach(r => {
+      done++;
+      if (r.status === 'fulfilled') allArticles.push(...r.value);
+      setStatus(`Loading feeds ${done}/${total} — ${allArticles.length} stories`, 'loading');
+    });
+    renderAll();
+  }
+
+  document.getElementById('last-updated').textContent =
+    'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  setStatus(`${allArticles.length} live stories across ${CATEGORIES.length} channels`, 'active');
+  btn.classList.remove('loading');
+  icon.classList.remove('spin');
+}
+
+window.addEventListener('DOMContentLoaded', loadAllNews);
+</script>
+</body>
+</html>
